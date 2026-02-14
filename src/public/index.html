@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kafka Event Dashboard</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; background-color: #f4f4f9; }
+        .card { background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 1.5rem; }
+        h2 { margin-top: 0; color: #333; }
+        .form-group { margin-bottom: 1rem; }
+        label { display: block; margin-bottom: 0.5rem; font-weight: bold; }
+        input, select { width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+        button { background-color: #28a745; color: white; padding: 0.7rem 1.5rem; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem; }
+        button:hover { background-color: #218838; }
+        button.refresh { background-color: #007bff; }
+        button.refresh:hover { background-color: #0069d9; }
+        pre { background: #2d2d2d; color: #50fa7b; padding: 1rem; border-radius: 4px; overflow-x: auto; }
+        .status { margin-top: 1rem; font-weight: bold; }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h2>Event Generator (Producer)</h2>
+        <div class="form-group">
+            <label>User ID</label>
+            <input type="text" id="userId" placeholder="e.g., user_123" value="test_user">
+        </div>
+        <div class="form-group">
+            <label>Event Type</label>
+            <select id="eventType">
+                <option value="LOGIN">LOGIN</option>
+                <option value="LOGOUT">LOGOUT</option>
+                <option value="PRODUCT_VIEW">PRODUCT_VIEW</option>
+                <option value="PURCHASE">PURCHASE</option>
+            </select>
+        </div>
+        <button onclick="generateEvent()">Generate Event via Kafka</button>
+        <div id="producerStatus" class="status"></div>
+    </div>
+
+    <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h2>Processed Events (Consumer)</h2>
+            <button class="refresh" onclick="fetchEvents()">Refresh List</button>
+        </div>
+        <p>These events have been processed by the Kafka Consumer:</p>
+        <pre id="eventsList">No events found yet...</pre>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3000/events';
+
+        async function generateEvent() {
+            const userId = document.getElementById('userId').value;
+            const eventType = document.getElementById('eventType').value;
+            const statusDiv = document.getElementById('producerStatus');
+
+            if(!userId) {
+                statusDiv.innerHTML = '<span class="error">Please enter a User ID</span>';
+                return;
+            }
+
+            statusDiv.innerHTML = 'Sending...';
+
+            try {
+                const response = await fetch(`${API_URL}/generate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId, eventType, payload: { source: 'web-ui' } })
+                });
+                const result = await response.json();
+                
+                if(response.ok) {
+                    statusDiv.innerHTML = `<span class="success"> Success! Event ID: ${result.eventId}</span>`;
+                    // Auto-refresh after 1 second
+                    setTimeout(fetchEvents, 1000); 
+                } else {
+                    statusDiv.innerHTML = `<span class="error">Error: ${result.error}</span>`;
+                }
+            } catch (err) {
+                statusDiv.innerHTML = `<span class="error">Connection Failed: ${err.message}</span>`;
+            }
+        }
+
+        async function fetchEvents() {
+            const listElement = document.getElementById('eventsList');
+            const btn = document.querySelector('button.refresh');
+            
+            // Visual feedback: Change button text temporarily
+            const originalText = btn.innerText;
+            btn.innerText = "Loading...";
+            
+            console.log("Fetching latest events...");
+
+            try {
+                const response = await fetch(`${API_URL}/processed`);
+                const events = await response.json();
+                
+                // Add a timestamp so you KNOW it updated
+                const time = new Date().toLocaleTimeString();
+                listElement.textContent = `Last Updated: ${time}\n\n` + JSON.stringify(events, null, 2);
+                console.log(`Loaded ${events.length} events`);
+            } catch (err) {
+                listElement.textContent = 'Error fetching events: ' + err.message;
+                console.error(" Fetch error:", err);
+            } finally {
+                // Restore button text
+                btn.innerText = originalText;
+            }
+        }
+
+        // Initial fetch
+        fetchEvents();
+    </script>
+</body>
+</html>
