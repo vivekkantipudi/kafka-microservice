@@ -114,6 +114,7 @@ Returns the list of events that have been successfully consumed and stored.
 - **Frontend Integration:** Added a static frontend (`src/public`) served by Express to provide a visual proof of the event lifecycle without needing external tools like Postman.
 
 ## Project Structure
+```
 kafka-microservice/
 ├── src/
 │ ├── config/ # Kafka client configuration
@@ -126,10 +127,11 @@ kafka-microservice/
 ├── docker-compose.yml # Docker orchestration
 ├── Dockerfile # App container definition
 └── package.json # Dependencies
+```
 
 ##  Author
 
-**[Your Name/Username]**
+**K Vivek Vardhan**
 
-GitHub: [Your GitHub Profile URL]
+GitHub: https://github.com/vivekkantipudi/kafka-microservice
 
